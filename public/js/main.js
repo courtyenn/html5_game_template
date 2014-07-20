@@ -3,18 +3,31 @@ var game_template = (function () {
     var CANVAS_WIDTH = 600, CANVAS_HEIGHT = 600, FPS = 30;
     
     var canvas, stage, queue, frameCount, gameTimer, frames, previousGameState = "",
-        currentGameState ="", score, mousePos;
-    var walk, menu,gameMenu,instructions, blockArray,screenArray, snManager;
-    var snManager;
+        currentGameState ="", score = 0, mousePos;
+    var walk, menu,gamePlay,gameMenu,instructions, blockArray,screenArray, snManager;
+    var snManager,textTime,date,gamePoints,gamePoints2,pauseTimer,keyText;
     blockArray = [];
     
+    var KEYCODE_ENTER = 13;	//usefull keycode
+    var KEYCODE_SPACE = 32;	//usefull keycode
+    var KEYCODE_UP = 38;	//usefull keycode
+    var KEYCODE_LEFT = 37;	//usefull keycode
+    var KEYCODE_RIGHT = 39;	//usefull keycode
+    var KEYCODE_DOWN = 40;
+    var KEYCODE_W = 87;	//usefull keycode
+    var KEYCODE_A = 65;	//usefull keycode
+    var KEYCODE_D = 68;	//usefull keycode
+    
+    document.onkeydown = handleKeyDown;
+    document.onkeyup = handleKeyUp;
     
     var fileManifest = [
         {src:"bug.png", id:"bugs"},
         {src:"title_screen.jpg", id:"title_screen"},
         {src:"instruction_screen.jpg", id:"instructions"},
         {src:"gameover_screen.jpg", id:"gameover_screen"},
-        {src:"menu.png", id:"menu"}
+        {src:"menu.png", id:"menu"},
+        {src:"level-one.jpg", id:"level"}
     ];
     
     function ScreenManager(){
@@ -37,17 +50,27 @@ var game_template = (function () {
                 for(var x = 0; x < numberScreens.length; x++){
                     numberScreens[x].visible = false;
                 }
-                if(id !== "none")
-                    screens[id].visible = true;
+                screens[id].visible = true;
             }
         }
     }
     
-    function Screen(bg){
+    function Screen(bg, left,top,animate,loop){
         var visible = false;
+        var loop = loop;
+        var tween;
+        
         var image = new createjs.Bitmap(bg);
+        image.x = left || 0;
+        image.y = top || 0;
+        if(animate !== "true")
+            stage.addChild(image);        
+        
         var btns = new Array();
-        stage.addChild(image);
+        var txt = new Array();
+        var objects = new Array();
+        var lookObj = {};
+        
         
         return {
             visible : false,
@@ -60,12 +83,24 @@ var game_template = (function () {
                     for(var y = 0; y<btns.length;y++){
                         btns[y].visible = true;
                     }
+                    for(var i = 0; i < txt.length; i++){
+                        txt[i].visible = true;   
+                    }
+                    for(var i = 0; i < objects.length; i++){
+                        objects[i].visible = true;   
+                    }
                 }
                 else{
                     image.visible = false;
                     for(var y = 0; y<btns.length;y++){
                         //console.log(btns[y].visible);
                         btns[y].visible = false;
+                    }
+                    for(var i = 0; i < txt.length; i++){
+                        txt[i].visible = false;   
+                    }
+                    for(var i = 0; i < objects.length; i++){
+                        objects[i].visible = false;   
                     }
                 }
             },
@@ -74,36 +109,42 @@ var game_template = (function () {
                 btn.y = y || 100;
                 btns.push(btn);
                 stage.addChild(btn);
+            },
+            addContent: function(text, x, y, font, color){
+                text.x = x || 0;
+                text.y = y || 0;
+                text.font = font || text.font || "19px Arial";
+                text.color = color || text.color || "#f00";
+                stage.addChild(text);
+                txt.push(text);
+            },
+            addObject: function(id, obj, x, y){
+                
+                obj.x = x || obj.x ||0;
+                obj.y = y || obj.y ||0;
+                objects.push(obj);
+                lookObj[id] = obj;
+                stage.addChild(obj);
+            },
+            getObject: function(id){
+                return lookObj[id];
+            },
+            getAllObjects: function(){
+                return objects;   
+            },
+            playTween : function(){
+                image.visible = true;
+                tween = createjs.Tween.get(image, {loop:false}).to({x:image.x, y:CANVAS_HEIGHT-395},1500, createjs.Ease.bounceOut).wait(1200).
+                to({x:image.x,y:-400},1000,createjs.Ease.bounceOut).call(handleComplete);   
+                
+                stage.addChild(image);
             }
         }
     }
-    /*
-    function Button(x,y,width,height,bg){
-        var content,action;
-        var x = x; 
-        var y = y;
-        var width = width;
-        var height = height;
-        
-        return{
-            checkClick : function(mouseX,mouseY){
-                // if()
-                return false;
-            },
-            content : "",
-            action : function(){}
-            
-        }
-    }
-    
-    */
     
     gamestates = {
         "START" : function(){
             if(previousGameState !== currentGameState){
-                
-            }
-            else{
                 
             }
         },
@@ -111,14 +152,9 @@ var game_template = (function () {
             
             if(previousGameState !== currentGameState){
                 
-                var title = snManager.getScreen("title");
-                title.visible = true;
+                snManager.switchScreen("title");
                 
                 previousGameState = currentGameState;
-                
-            }
-            else{
-                
                 
             }
             
@@ -129,16 +165,34 @@ var game_template = (function () {
                 var m = list[x];
                 m.update();   
             }
+            stage.update();
             
         },
         "PLAYING" : function(){
+            var currentTime = new Date();
+            var theTime;
+            theTime = currentTime - date;
+            theTime = Math.floor((theTime / 1000)*10)/10;
+            if(previousGameState == "LEVEL"){
+                console.log('LEVELING?');
+                theTime = pauseTimer;
+            }
+            textTime.text = 'Time: ' + theTime.toFixed(1);
+            
             if(previousGameState !== currentGameState){
-                runGameTimer();
+                
                 previousGameState = currentGameState;
             }
-            else{
-                if(gameTimer >= 10)currentGameState = "GAME_OVER";
+            // console.log("gametimer:" + gameTimer);
+            if(theTime == 5){
+                console.log("THETIME: " + theTime);
+                spauseGameTimer(theTime);
+                currentGameState = "LEVEL";
             }
+            else if(theTime >= 10){
+                currentGameState = "GAME_OVER";
+            }
+            
             var length = snManager.getAllScreens().length;
             var list = snManager.getAllScreens()
             
@@ -146,6 +200,10 @@ var game_template = (function () {
                 var m = list[x];
                 m.update();   
             }
+            
+            gamePoints.text = 'Score: ' + score;
+            stage.update();
+            
         },
         "INSTRUCTIONS" : function () {
             if(previousGameState !== currentGameState){
@@ -163,14 +221,19 @@ var game_template = (function () {
                 m.update();   
             }
         },
-        "LEVEL" : {
-            
+        "LEVEL" : function() {
+            if(previousGameState !== currentGameState){
+                var lvl = snManager.getScreen("tween");
+                lvl.visible = true;
+                lvl.playTween();
+                previousGameState = currentGameState;
+            }
         },
         "GAME_OVER" : function(){
             if(previousGameState !== currentGameState){
-                var screen = snManager.getScreen("gameover");
-                screen.visible = true;
+                snManager.switchScreen("gameover");
                 previousGameState = currentGameState;
+                pauseTimer = 0;
             }
             
             var length = snManager.getAllScreens().length;
@@ -185,7 +248,9 @@ var game_template = (function () {
     
     function handleClick(event) {
         currentGameState = "PLAYING";
-        snManager.switchScreen("none");
+        runGameTimer();
+        displaySprites();
+        snManager.switchScreen("gamePlay");
     }
     
     function menuClick(event){
@@ -196,6 +261,33 @@ var game_template = (function () {
     function instructClick(event){
         currentGameState = "INSTRUCTIONS";   
         snManager.switchScreen("instructions");
+    }
+    function handleComplete(tween) {
+        var ball = tween._target;
+        console.log('ANIMATION COMPLETED');
+        resetGameTimer();
+        
+    }
+    
+    function resetGameTimer(){
+        frames = 0;
+        currentGameState = "PLAYING";
+        walk.gotoAndPlay("walkRight");
+        
+    }
+    function pauseGameTimer(num){
+        console.log('PAUSED TIME:' + num);
+        pauseTimer= num + .1;   
+        walk.gotoAndPlay("standRight");
+        
+    }
+    function runGameTimer(){
+        frames += 1;
+        /*if(frames%(FPS/10) === 0){
+            gameTimer = frames/(FPS);   
+        }*/
+        date = new Date();
+        
     }
     
     function loadFiles(){
@@ -218,9 +310,6 @@ var game_template = (function () {
                 menuHover:[5,5,"menuHover"]
             }
         });
-        //here I throw the frames into a sprite called 'blocks'
-        //blocks = new createjs.Sprite(blockSheet);
-        
         
         var walkSheet = new createjs.SpriteSheet({
             images: [queue.getResult("bugs")],//["bug.png"]
@@ -236,7 +325,6 @@ var game_template = (function () {
         gameMenu = new createjs.Sprite(menuSheet);
         var gameMenu2 = new createjs.Sprite(menuSheet);
         instructions = new createjs.Sprite(menuSheet);
-        //displaySprites();
         
         var helper = new createjs.ButtonHelper(menu, "play", "playHover");
         var helper2 = new createjs.ButtonHelper(gameMenu, "menu", "menuHover");
@@ -252,28 +340,79 @@ var game_template = (function () {
         var title = Screen(queue.getResult("title_screen"));
         var game_over = Screen(queue.getResult("gameover_screen"));
         var instruct = Screen(queue.getResult("instructions"));
+        var gamePlay = Screen();
+        var shape = new createjs.Shape();
+        var tween = Screen(queue.getResult("level"), 100, 0,"true");
+        
         
         snManager = new ScreenManager();
+        snManager.addScreen("tween", tween);
         snManager.addScreen("title", title);
         snManager.addScreen("gameover", game_over);
         snManager.addScreen("instructions", instruct);
+        snManager.addScreen("gamePlay", gamePlay);
+        
         
         title.addButton(menu,120,300);
         title.addButton(instructions,280,300);
         game_over.addButton(gameMenu, CANVAS_WIDTH/2-20, 300);
         instruct.addButton(gameMenu2, CANVAS_WIDTH/2-20, 300);
         
+        mousePos = new createjs.Text("Mouse", "20px Arial", "#f00");
+        textTime = new createjs.Text("Time: ", "20px Arial", "#f00");
+        gamePoints = new createjs.Text("Score: " + score, "30px Arial", "#fff");
+        gamePoints2 = new createjs.Text("Score: " + score, "30px Arial", '#fff');
+        keyText = new createjs.Text("Keys held: {  } ", "20px Arial", "#fff" );
+        
+        stage.on('stagemousemove', function(evt){
+            mousePos.text = 'Mouse{X: ' + evt.stageX + ', Y:' + evt.stageY+"}";
+        });
+        gamePlay.addContent(mousePos);
+        gamePlay.addContent(textTime, CANVAS_WIDTH-190);
+        gamePlay.addContent(gamePoints, 60, CANVAS_HEIGHT-30);
+        game_over.addContent(gamePoints2, CANVAS_WIDTH/2-90, CANVAS_HEIGHT/2-90);
+        instruct.addContent(keyText, 30, CANVAS_HEIGHT-100);
+        
+        
         currentGameState = "TITLE";
         startLoop();
     }
     
     function displaySprites() {
-        walk.x=100;
-        walk.y=200;
+        var screen = snManager.getScreen('gamePlay');
+        screen.addObject("bug", walk, 100, 180);
         walk.gotoAndPlay("walkRight");
-        stage.addChild(walk);
-        stage.update();
         
+    }
+    
+    function handleKeyDown(e) {
+        if(!e){ var e = window.event; }
+        switch(e.keyCode) {
+            case KEYCODE_LEFT:	
+                keyText.text = "Keys held: { LEFT }";
+                break;
+            case KEYCODE_RIGHT: 
+                keyText.text = "Keys held: { RIGHT }";
+                break;
+            case KEYCODE_UP: 
+                keyText.text = "Keys held: { UP }";
+                break;
+            case KEYCODE_DOWN: 
+                keyText.text = "Keys held: { DOWN }";
+                break;
+        }
+        stage.update();
+    }
+    
+    function handleKeyUp(e){
+        //cross browser issues exist
+        if(!e){ var e = window.event; }
+        switch(e.keyCode) {
+            case KEYCODE_LEFT: keyText.text = "Keys held: {  }"; break;
+            case KEYCODE_RIGHT: keyText.text = "Keys held: {  }"; break;
+            case KEYCODE_UP: keyText.text = "Keys held: {  }"; break;
+            case KEYCODE_DOWN: keyText.text = "Keys held: {  }"; break;
+        }
     }
     
     function setup(){
@@ -282,46 +421,17 @@ var game_template = (function () {
         canvas.height = CANVAS_HEIGHT;
         stage = new createjs.Stage(canvas);
         stage.enableMouseOver(10);
-        mousePos = new createjs.Text("Mouse", "20px Arial", "#f00");
         
-        stage.on('stagemousemove', function(evt){
-            mousePos.text = 'Mouse{X: ' + evt.stageX + ', Y:' + evt.stageY+"}";
-        });
-        stage.addChild(mousePos);
         currentGameState = "TITLE";
-        // startLoop(); //temporary until I can preload
+        
     }
     
-    function resetGameTimer(){
-        frames = 0;
-        gameTimer = 0;
-    }
-    function runGameTimer(){
-        frames += 1;
-        /*if(frames%(FPS/10) === 0){
-            gameTimer = frames/(FPS);   
-        }*/
-        setTimeout(function(){
-            currentGameState ="GAME_OVER";
-        }, 10000);
-        /* gameTimer = setInterval(function(){
-                init();
-            }, 1000/FPS);*/
-    }
     function update(){
-        //var y = ScreenManager().getAllScreens();
-        //console.log(y);
-        /* for(var x = 0; x < ScreenManager().getAllScreens().length; x++){
-           
-       }*/
+        
         stage.update();
     }
     function draw(){
-        // console.log('UPDATING');
         gamestates[currentGameState]();
-        // stage.fillText("SCORE: " + score, CANVAS_WIDTH-100, CANVAS_HEIGHT-20);
-        //stage.fillText(mousePos, CANVAS_WIDTH-80, 20);
-        
     }
     function loop(){
         frames++;
@@ -330,6 +440,7 @@ var game_template = (function () {
     }
     //This creates the loop that workes like setInterval
     function startLoop() {
+        
         createjs.Ticker.addEventListener("tick", loop);
         createjs.Ticker.setFPS(FPS);
         
@@ -346,7 +457,6 @@ var game_template = (function () {
             
         }
     }
-    
     
 })();
 
