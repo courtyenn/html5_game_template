@@ -5,7 +5,7 @@ var game_template = (function () {
     var canvas, stage, queue, frameCount, gameTimer, frames, previousGameState = "",
         currentGameState ="", score = 0, mousePos;
     var walk, menu,gamePlay,gameMenu,instructions, blockArray,screenArray, snManager;
-    var snManager,textTime,date,gamePoints,gamePoints2,pauseTimer,keyText;
+    var snManager,textTime,date,gamePoints,gamePoints2,pauseTimer,keyText,keystate = {};
     blockArray = [];
     
     var KEYCODE_ENTER = 13;	//usefull keycode
@@ -150,10 +150,8 @@ var game_template = (function () {
         },
         "TITLE" : function(){
             
-            if(previousGameState !== currentGameState){
-                
+            if(previousGameState !== currentGameState){             
                 snManager.switchScreen("title");
-                
                 previousGameState = currentGameState;
                 
             }
@@ -186,7 +184,7 @@ var game_template = (function () {
             // console.log("gametimer:" + gameTimer);
             if(theTime == 5){
                 console.log("THETIME: " + theTime);
-                spauseGameTimer(theTime);
+                pauseGameTimer(theTime);
                 currentGameState = "LEVEL";
             }
             else if(theTime >= 10){
@@ -207,7 +205,6 @@ var game_template = (function () {
         },
         "INSTRUCTIONS" : function () {
             if(previousGameState !== currentGameState){
-                
                 previousGameState = currentGameState;
             }
             else{
@@ -265,8 +262,7 @@ var game_template = (function () {
     function handleComplete(tween) {
         var ball = tween._target;
         console.log('ANIMATION COMPLETED');
-        resetGameTimer();
-        
+        resetGameTimer(); 
     }
     
     function resetGameTimer(){
@@ -291,7 +287,7 @@ var game_template = (function () {
     }
     
     function loadFiles(){
-        queue = new createjs.LoadQueue(true, "../images/");
+        queue = new createjs.LoadQueue(true, "assets/images/");
         queue.installPlugin(createjs.Sound);
         queue.on("complete", loadComplete, this);
         queue.loadManifest(fileManifest);
@@ -401,7 +397,6 @@ var game_template = (function () {
                 keyText.text = "Keys held: { DOWN }";
                 break;
         }
-        stage.update();
     }
     
     function handleKeyUp(e){
@@ -439,11 +434,9 @@ var game_template = (function () {
         draw();
     }
     //This creates the loop that workes like setInterval
-    function startLoop() {
-        
+    function startLoop() {       
         createjs.Ticker.addEventListener("tick", loop);
-        createjs.Ticker.setFPS(FPS);
-        
+        createjs.Ticker.setFPS(FPS);      
     }
     
     function init(){
@@ -453,11 +446,9 @@ var game_template = (function () {
     
     return {
         playGame : function playGame(){
-            init();
-            
+            init();          
         }
-    }
-    
+    }  
 })();
 
 (function(){
