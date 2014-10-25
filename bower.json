@@ -1,0 +1,30 @@
+{
+  "name": "html5_game_template",
+  "version": "0.0.0",
+  "homepage": "https://github.com/courtneynguyen/html5_game_template",
+  "description": "html5_game_template is designed with the idea of a reusable game template for canvas games. In this template I include a number of basic functionality. If there are sections of functions that are not needed, delete the section, because although my template is verbose, it covers several basic usages.",
+  "main": "public/assets/js/main.js",
+  "keywords": [
+    "canvas",
+    "game",
+    "template",
+    "html5"
+  ],
+  "authors": [
+    "Courtney Nguyen"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "easeljs": "*",
+    "createjs-preloadjs": "*",
+    "createjs-soundjs": "*",
+    "createjs-tweenjs": "*"
+  }
+}

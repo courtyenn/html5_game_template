@@ -20,7 +20,17 @@ var game_template = (function () {
     
     document.onkeydown = handleKeyDown;
     document.onkeyup = handleKeyUp;
-    
+   
+    /*
+     * Key Press
+     * Be sure to add 
+     * keyPressed[KEY_CODE] = false;
+     * after an action so that the button is not pressed multiple times
+     */
+    window.onkeyup = function(event) {
+    	keyPressed[event.keyCode] = true;
+    }
+
     var fileManifest = [
         {src:"bug.png", id:"bugs"},
         {src:"title_screen.jpg", id:"title_screen"},
